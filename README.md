@@ -10,7 +10,7 @@ BulkImageDeleter will delete images based on tags.
 
 
 Installation instructions:
-Rule34Downloader and BulkImageDeleter do not require any installations, simply run the Rule34Downloader.exe and ImageDeleter.exe.
+Rule34Downloader and BulkImageDeleter do not require any installation if you download the release, simply run the Rule34Downloader.exe and ImageDeleter.exe. If you are downloading the source files, you can compile them yourself by opening a command prompt, navigating to the location with the source files, and typing "dotnet build" without quotes. This will greate a new directory in that folder with an executable for the program. Alteritavely, in the command prompt you can also type "dotnet run" without quotes after compiling to run the program.
 
 Rule34Viewer does not require installation, however it does need python 3.10 or later to run. Launch  the program by opening a command prompt and navigating to the directory it is located in and typing "python viewer.py" without quotes.
 
