@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Rule34 Unlimited Tag Filter",
+  "version": "1.0",
+  "description": "Client-side tag filtering without the 100 tag limit.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://rule34.xxx/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://rule34.xxx/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
