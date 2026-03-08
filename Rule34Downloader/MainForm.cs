@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -62,6 +62,14 @@ namespace Rule34Downloader
             btnForceDownload.Click += async (_, _) => await ForceDownload();
 
             btnBrowseBlacklist.Click += (_, _) => ChooseBlacklist();
+
+            chkIncludeComments.CheckedChanged += (_, _) =>
+            {
+                chkOnlyWithComments.Enabled = chkIncludeComments.Checked;
+
+                if (!chkIncludeComments.Checked)
+                    chkOnlyWithComments.Checked = false;
+            };
 
             numMaxDownloads.ValueChanged += (_, _) =>
             {
@@ -221,6 +229,19 @@ namespace Rule34Downloader
                 if (ContainsAnyNegative(post))
                     continue;
 
+                List<ApiComment> comments = null;
+
+                if (chkIncludeComments.Checked)
+                {
+                    comments = await GetCommentsAsync(post.id);
+
+                    // Respect rate limit
+                    await Task.Delay(1000);
+
+                    if (chkOnlyWithComments.Checked && comments.Count == 0)
+                        continue;
+                }
+
                 try
                 {
                     byte[] data = await http.GetByteArrayAsync(post.file_url);
@@ -236,7 +257,8 @@ namespace Rule34Downloader
                         post.id,
                         post.rating,
                         post.file_url,
-                        tags = categorizedTags
+                        tags = categorizedTags,
+                        comments = chkIncludeComments.Checked ? comments : null
                     };
 
                     File.WriteAllText(path + ".json",
@@ -333,6 +355,19 @@ namespace Rule34Downloader
 
             if (numMaxDownloads != null)
                 numMaxDownloads.Value = settings.MaxDownloads;
+
+            if (chkIncludeComments != null)
+                chkIncludeComments.Checked = settings.IncludeComments;
+
+            if (chkOnlyWithComments != null)
+                chkOnlyWithComments.Checked = settings.OnlyWithComments;
+
+            // Ensure correct enabled state after load
+            chkOnlyWithComments.Enabled = chkIncludeComments.Checked;
+
+            // Safety: cannot be true if IncludeComments is false
+            if (!chkIncludeComments.Checked)
+                chkOnlyWithComments.Checked = false;
         }
 
         void SaveConfig()
@@ -344,6 +379,8 @@ namespace Rule34Downloader
             settings.DownloadFolder = downloadFolder.Text;
             settings.BlacklistPath = txtBlacklist.Text;
             settings.MaxDownloads = (int)numMaxDownloads.Value;
+            settings.IncludeComments = chkIncludeComments.Checked;
+            settings.OnlyWithComments = chkOnlyWithComments.Checked;
 
             File.WriteAllText(ConfigFile,
                 JsonSerializer.Serialize(settings, new JsonSerializerOptions
@@ -617,6 +654,14 @@ namespace Rule34Downloader
 
                 var post = posts[0];
 
+                List<ApiComment> comments = null;
+
+                if (chkIncludeComments.Checked)
+                {
+                    comments = await GetCommentsAsync(post.id);
+                    await Task.Delay(1000);
+                }
+
                 byte[] data = await http.GetByteArrayAsync(post.file_url);
                 string ext = Path.GetExtension(post.file_url);
                 string path = Path.Combine(downloadFolder.Text, $"{post.id}{ext}");
@@ -630,7 +675,8 @@ namespace Rule34Downloader
                     post.id,
                     post.rating,
                     post.file_url,
-                    tags = categorizedTags
+                    tags = categorizedTags,
+                    comments = chkIncludeComments.Checked ? comments : null
                 };
 
                 File.WriteAllText(path + ".json",
@@ -672,6 +718,44 @@ namespace Rule34Downloader
             while (!pauseEvent.IsSet)
             {
                 await Task.Delay(100);
+            }
+        }
+
+        async Task<List<ApiComment>> GetCommentsAsync(int postId)
+        {
+            string url =
+                "https://rule34.xxx/index.php?page=dapi&s=comment&q=index" +
+                $"&post_id={postId}" +
+                $"&api_key={Uri.EscapeDataString(settings.ApiKey)}" +
+                $"&user_id={Uri.EscapeDataString(settings.UserId)}";
+
+            try
+            {
+                string xml = await http.GetStringAsync(url);
+
+                // Authentication failure check
+                if (xml.StartsWith("Missing authentication"))
+                    return new List<ApiComment>();
+
+                var doc = XDocument.Parse(xml);
+
+                var comments = doc.Root?
+                    .Elements("comment")
+                    .Select(c => new ApiComment
+                    {
+                        id = (int?)c.Attribute("id") ?? 0,
+                        post_id = (int?)c.Attribute("post_id") ?? 0,
+                        creator = (string?)c.Attribute("creator") ?? "",
+                        body = WebUtility.HtmlDecode((string?)c.Attribute("body") ?? ""),
+                        created_at = (string?)c.Attribute("created_at") ?? ""
+                    })
+                    .ToList();
+
+                return comments ?? new List<ApiComment>();
+            }
+            catch
+            {
+                return new List<ApiComment>();
             }
         }
 
