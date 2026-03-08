@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, QSettings, QSize, QObject, QEvent, QThread, QByteArray, QBuffer, QIODevice, QUrl
 from PySide6.QtGui import QPixmap, QMovie
-from PySide6.QtWidgets import QSpinBox, QTextEdit, QSplitter, QLineEdit, QTextEdit
+from PySide6.QtWidgets import QSpinBox, QTextEdit, QSplitter, QLineEdit, QTextEdit, QApplication
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
 
@@ -763,4 +763,5 @@ app = QApplication(sys.argv)
 v = Viewer()
 v.show()
 sys.exit(app.exec())
+
 
