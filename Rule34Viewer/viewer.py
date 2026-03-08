@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, QSettings, QSize, QObject, QEvent, QThread, QByteArray, QBuffer, QIODevice, QUrl
 from PySide6.QtGui import QPixmap, QMovie
-from PySide6.QtWidgets import QSpinBox, QTextEdit, QSplitter
+from PySide6.QtWidgets import QSpinBox, QTextEdit, QSplitter, QLineEdit, QTextEdit, QApplication
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
 
@@ -22,6 +22,11 @@ class KeyFilter(QObject):
 
     def eventFilter(self, obj, event):
         if event.type() != QEvent.KeyPress:
+            return False
+
+        # If user is typing in a text field, do NOT intercept keys
+        focus = QApplication.focusWidget()
+        if isinstance(focus, (QLineEdit, QTextEdit)):
             return False
 
         key = event.key()
@@ -741,11 +746,22 @@ class Viewer(QMainWindow):
         self.audio.setVolume(value / 100)
         self.settings.setValue("volume", value)
 
+    def mousePressEvent(self, event):
+        focus = QApplication.focusWidget()
 
+        # If a text box currently has focus and user clicks elsewhere, remove focus
+        if isinstance(focus, (QLineEdit, QTextEdit)):
+            widget = self.childAt(event.position().toPoint())
 
+            if not isinstance(widget, (QLineEdit, QTextEdit)):
+                focus.clearFocus()
+
+        super().mousePressEvent(event)
 
 
 app = QApplication(sys.argv)
 v = Viewer()
 v.show()
 sys.exit(app.exec())
+
+
