@@ -1,18 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <h3>Rule34 Tag Filter</h3>
 
-  <label>Whitelist (must have):</label>
-  <textarea id="whitelist"></textarea>
+  <label>Positive tags (must have all):</label>
+  <textarea id="positive_tags"></textarea>
 
-  <label>Blacklist (must NOT have):</label>
-  <textarea id="blacklist"></textarea>
+  <label>Negative tags (must NOT have):</label>
+  <textarea id="negative_tags"></textarea>
 
-  <button id="save">Save</button>
+  <hr>
+
+  <div class="toggle-row">
+    <label for="show_blacklisted">Show blacklisted images</label>
+    <input type="checkbox" id="show_blacklisted">
+  </div>
+
+  <div class="bl-info">
+    <span id="bl_count">0</span> image(s) in blacklist
+  </div>
+
+  <label class="path-label">Blacklist file path:</label>
+  <div class="path-row">
+    <input type="text" id="bl_path" spellcheck="false" placeholder="e.g. C:\Users\you\blacklist.txt">
+    <button id="bl_path_save" title="Save path">✓</button>
+  </div>
+  <div id="path_status" class="path-status"></div>
 
   <script src="popup.js"></script>
 </body>
