@@ -1,36 +1,112 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <h3>Rule34 Tag Filter</h3>
+// popup.js
 
-  <label>Positive tags (must have all):</label>
-  <textarea id="positive_tags"></textarea>
+const positiveTagsEl = document.getElementById("positive_tags");
+const negativeTagsEl = document.getElementById("negative_tags");
+const showBlEl       = document.getElementById("show_blacklisted");
+const blCountEl      = document.getElementById("bl_count");
+const blPathEl       = document.getElementById("bl_path");
+const blPathSaveBtn  = document.getElementById("bl_path_save");
+const pathStatusEl   = document.getElementById("path_status");
 
-  <label>Negative tags (must NOT have):</label>
-  <textarea id="negative_tags"></textarea>
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-  <hr>
+function normalizeInput(text) {
+  return text.endsWith("\n") ? text : text + "\n";
+}
 
-  <div class="toggle-row">
-    <label for="show_blacklisted">Show blacklisted images</label>
-    <input type="checkbox" id="show_blacklisted">
-  </div>
+function saveTags() {
+  browser.storage.local.set({
+    positive_tags: positiveTagsEl.value.split(/\s+/).filter(Boolean),
+    negative_tags: negativeTagsEl.value.split(/\s+/).filter(Boolean)
+  });
+}
 
-  <div class="bl-info">
-    <span id="bl_count">0</span> image(s) in blacklist
-  </div>
+async function broadcastToTabs(msg) {
+  const tabs = await browser.tabs.query({ url: "https://rule34.xxx/*" });
+  for (const tab of tabs) {
+    try { await browser.tabs.sendMessage(tab.id, msg); } catch (_) {}
+  }
+}
 
-  <label class="path-label">Blacklist file path:</label>
-  <div class="path-row">
-    <input type="text" id="bl_path" spellcheck="false" placeholder="e.g. C:\Users\you\blacklist.txt">
-    <button id="bl_path_save" title="Save path">✓</button>
-  </div>
-  <div id="path_status" class="path-status"></div>
+function showPathStatus(msg, isError) {
+  pathStatusEl.textContent = msg;
+  pathStatusEl.className = "path-status " + (isError ? "path-status--error" : "path-status--ok");
+  // Fade out after 3s
+  clearTimeout(showPathStatus._timer);
+  showPathStatus._timer = setTimeout(() => { pathStatusEl.textContent = ""; }, 3000);
+}
 
-  <script src="popup.js"></script>
-</body>
-</html>
+// ── Blacklist count + path ────────────────────────────────────────────────────
+
+async function refreshBl() {
+  try {
+    const resp = await browser.runtime.sendMessage({ type: "bl_load" });
+    if (resp.ok) {
+      blCountEl.textContent = resp.ids.length;
+      if (resp.path && blPathEl.value !== resp.path) {
+        blPathEl.value = resp.path;
+      }
+    } else {
+      blCountEl.textContent = "?";
+    }
+  } catch (e) {
+    blCountEl.textContent = "?";
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+browser.storage.local.get(["positive_tags", "negative_tags", "show_blacklisted"]).then(data => {
+  positiveTagsEl.value = normalizeInput((data.positive_tags || []).join("\n"));
+  negativeTagsEl.value = normalizeInput((data.negative_tags || []).join("\n"));
+  showBlEl.checked     = !!data.show_blacklisted;
+
+  for (const el of [positiveTagsEl, negativeTagsEl]) {
+    el.scrollTop = el.scrollHeight;
+    el.selectionStart = el.selectionEnd = el.value.length;
+  }
+});
+
+refreshBl();
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+
+positiveTagsEl.addEventListener("input", saveTags);
+negativeTagsEl.addEventListener("input", saveTags);
+
+showBlEl.addEventListener("change", async () => {
+  const value = showBlEl.checked;
+  await browser.storage.local.set({ show_blacklisted: value });
+  await broadcastToTabs({ type: "set_show_blacklisted", value });
+});
+
+// Save path button
+blPathSaveBtn.addEventListener("click", async () => {
+  const newPath = blPathEl.value.trim();
+  if (!newPath) {
+    showPathStatus("Path cannot be empty.", true);
+    return;
+  }
+  blPathSaveBtn.disabled = true;
+  try {
+    const resp = await browser.runtime.sendMessage({ type: "bl_set_path", path: newPath });
+    if (resp.ok) {
+      blPathEl.value = resp.path;
+      blCountEl.textContent = resp.ids.length;
+      showPathStatus("Path saved.", false);
+      // Tell all open tabs to reload the blacklist
+      await broadcastToTabs({ type: "bl_updated" });
+    } else {
+      showPathStatus("Error: " + (resp.error || "unknown"), true);
+    }
+  } catch (e) {
+    showPathStatus("Native host error: " + e, true);
+  } finally {
+    blPathSaveBtn.disabled = false;
+  }
+});
+
+// Also save on Enter key in the path field
+blPathEl.addEventListener("keydown", e => {
+  if (e.key === "Enter") blPathSaveBtn.click();
+});
