@@ -1,10 +1,12 @@
 Check out source code and latest releases at https://github.com/Rule34Companion/Rule34Companion
 
-Rule34Companion is a suite of 4 programs and plugins that improve the experience of rule34.xxx and to manage the files you download from it. In summery:
+Rule34Companion is a suite of programs and plugins that improve the experience of rule34.xxx and to manage the files you download from it. In summery:
 
 Rule34Downloader will use the rule34.xxx api and your provided whitelist/blacklist tags to download images.
 
 FirefoxRule34TagFilter is a firefox extension that will allow you to filter images past the maximum default of 100 negative tags when browsing the website.
+
+Rule34NativeHost is a tool that allows the firefox extension to read and write the blacklist to another location, something that firefox does not allow extensions to do natively.
 
 Rule34Viewer will display images you've downloaded, and can filter the images using the same tag system.
 
@@ -12,15 +14,21 @@ BulkImageDeleter will delete images based on tags.
 
 
 Installation instructions:
+
 Rule34Downloader and BulkImageDeleter do not require any installation if you download the release, simply run the Rule34Downloader.exe and ImageDeleter.exe. If you are downloading the source files, you can compile them yourself by opening a command prompt, navigating to the location with the source files, and typing "dotnet build" without quotes. This will create a new directory in that folder with an executable for the program. Alteritavely, in the command prompt you can also type "dotnet run" without quotes after compiling to run the program.
 
 Rule34Viewer does not require installation, however it does need python 3.10 or later to run. Launch the program by opening a command prompt and navigating to the directory it is located in and typing "python viewer.py" without quotes.
 
 FirefoxRule34TagFilter is installed by typing "about:debugging" without quotes into the address bar and pressing enter. Then select "This Firefox" on the left. Click the "Load Temporary Add-on" button, then select manifest.json. If running in a private window, you must also enable the extentions to work while private browsing clicking the "Application Menu" button in the upper right (three horizontal bars), then "Extensions and Themes", then "Rule34 Unlimited Tag Filter", then select "Run in Private Window".
 
+Rule34NativeHost is installed by opening the instally_host.py and editing the EXTENSION_ID variable to what is shown as the extension id in firefox's "about:debugging" tab. Run this by opening a command prompt and navigating to Rule34NativeHost folder and typing "python install_host.py".
 
-Detailed instructions for each program.
-FirefoxRule34TagFilter: click on the "Extensions" button in the upper right of the firefox window (puzzle piece icon) and then click "Rule34 Unlimited Tag Filter" to open a small pop-up where you can input whitelist and blaclist tags. This filtering occurs client side after the search is completed with whatever whitelist and blacklist tags you have put into the rule34.xxx/ search bar and blacklist tags you have added to your account profile. This means that pags still populate normally, results are just hidden based on the filters in this extension. Best use of this extension is to use the search bar to search for tags you want, and use this extension to blacklist tags you don't want to see.
+
+Detailed instructions for each program:
+
+FirefoxRule34TagFilter: click on the "Extensions" button in the upper right of the firefox window (puzzle piece icon) and then click "Rule34 Unlimited Tag Filter" to open a small pop-up where you can input whitelist and blaclist tags. This filtering occurs client side after the search is completed with whatever whitelist and blacklist tags you have put into the rule34.xxx/ search bar and blacklist tags you have added to your account profile. This means that pages still populate normally, results are just hidden based on the filters in this extension. Best use of this extension is to use the search bar to search for tags you want, and use this extension to blacklist tags you don't want to see. You can also blacklist individual posts by hovering over the thumbanil of the post, or the full image in a post, and clicking the blacklist pop up button. There is a toggle to re-enable blacklisted post. Be sure to set the location of the blacklist file as the 'deleted_images.txt' located in the Rule34Viewer folder AFTER you perform the Rule34NativeHost install instructions and running rule34_blacklist_host.bat mentioned below.
+
+Rule34NativeHost: This program is what allows the firefox tag filter to correctly read and write to the deleted_images.txt. For security reasons firefox will not allow extensions to read and write to arbitrary files, so this program acts as a helper to read and write to the files firefox does allow the tag filter to work with, and the deleted_images.txt used by the other programs in the suite. Turn this service on by running the rule34_blaclist_host.bat that is created during the install step for this program. While the program is running you will be able to add the file location of your deleted_images.txt in the firefox extension.
 
 Rule34Downloader: Create a rule34.xxx account and navigate to https://rule34.xxx/index.php?page=account&s=options. There you will find a sections labeled API Access Credentials. If the field is blank, click the box labeled Generate New Key. Put the API Key and User ID generated into the correct input fields of the Rule34Downloader program. Input your positive and negative tags in the correct input fields. Comments for hte post will be downloaded if the download comments checkbox is checked, but please not that this will slow downloading significantly since a new api call to get comments must be made for every post. Set a download location and select the blacklist file location, usually located in the Rule34Viewer folder as deleted_images.txt. Set the maximum number of downloads and press "Search". When the search is completed press download. This program will avoid downloading duplicates. If the blacklist file is set, previously deleted images will also be avoided. The program is throttled to a maximum of 1 image per second to avoid timeouts. Single images can be downloaded by inserting the full link to the rule34.xxx page in the bar at the bottom and clicking "Force Download". This will ignore any restrictions, such as tag filtering, avoiding duplicates (it will overwrite the existing file), or avoiding previously deleted images. Along with the downloaded image a json sidecar will be created that containts the tags of the image with the same name. This sidecar is used by the viewer and the bulk image deleter programs.
 
