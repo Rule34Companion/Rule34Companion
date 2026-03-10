@@ -304,6 +304,8 @@ class Viewer(QMainWindow):
         self.audio.setMuted(mute)
         self.mute_btn.setText("Unmute" if mute else "Mute")
 
+        self.image_label.setFocusPolicy(Qt.NoFocus)
+
         self.load_folder()
 
     # ---------- Loading ----------
@@ -378,18 +380,18 @@ class Viewer(QMainWindow):
 
         # GIF handling (animated)
         if ext == ".gif":
-            # Fully release previous movie
+
             if self.movie:
                 self.movie.stop()
                 self.image_label.setMovie(None)
                 self.movie = None
                 self.movie_buffer = None
 
-            # Load GIF into memory so file is never locked
             with open(path, "rb") as f:
                 data = f.read()
 
             ba = QByteArray(data)
+
             buffer = QBuffer()
             buffer.setData(ba)
             buffer.open(QIODevice.ReadOnly)
@@ -397,14 +399,7 @@ class Viewer(QMainWindow):
             self.movie_buffer = buffer
             self.movie = QMovie(buffer)
 
-            target = self.media_container.size()
-
-            self.movie.setScaledSize(
-                self.movie.currentPixmap().size().scaled(
-                    target,
-                    Qt.KeepAspectRatio
-                )
-            )
+            self.movie.frameChanged.connect(self.scale_movie_once)
 
             self.image_label.setMovie(self.movie)
             self.movie.start()
@@ -448,6 +443,9 @@ class Viewer(QMainWindow):
         # slideshow only applies to images
         if self.slideshow_btn.isChecked() and ext not in VIDEO_EXTS:
             self.timer.start(self.interval_input.value() * 1000)
+
+        QTimer.singleShot(0, self.activateWindow)
+        QTimer.singleShot(0, self.setFocus)
 
         self.stack.setCurrentIndex(0)  # image page
         self.video_controls.hide()
@@ -593,7 +591,7 @@ class Viewer(QMainWindow):
         ext = os.path.splitext(path)[1].lower()
 
         # Animated GIF
-        if ext == ".gif" and self.movie:
+        if ext == ".gif" and self.movie and self.movie.currentPixmap().size().width() > 0:
             self.movie.setScaledSize(self.scaled_movie_size(self.movie))
             return
 
@@ -758,10 +756,28 @@ class Viewer(QMainWindow):
 
         super().mousePressEvent(event)
 
+    def scale_movie_once(self):
+
+        if not self.movie:
+            return
+
+        if self.movie.currentPixmap().size().width() == 0:
+            return
+
+        target = self.media_container.size()
+
+        scaled = self.movie.currentPixmap().size().scaled(
+            target,
+            Qt.KeepAspectRatio
+        )
+
+        self.movie.setScaledSize(scaled)
+
+        # Disconnect so it only runs once
+        self.movie.frameChanged.disconnect(self.scale_movie_once)
+
 
 app = QApplication(sys.argv)
 v = Viewer()
 v.show()
 sys.exit(app.exec())
-
-
