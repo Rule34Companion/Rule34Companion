@@ -1,77 +1,58 @@
-const normalize = t =>
-  t
-    .toLowerCase()
-    .trim()
-    .replace(/^-+/, "");
+/* content.css — Overlay button styles injected on rule34.xxx */
 
-async function getFilters() {
-  const data = await browser.storage.local.get(["whitelist", "blacklist"]);
-  return {
-    whitelist: (data.whitelist || []).map(normalize),
-    blacklist: (data.blacklist || []).map(normalize)
-  };
+.r34-bl-btn {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: sans-serif;
+  font-weight: bold;
+  line-height: 1.3;
+  white-space: nowrap;
+
+  color: #fff;
+  background: rgba(20, 20, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  cursor: pointer;
+
+  /* Hidden until parent is hovered — keeps the UI clean */
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  pointer-events: none;
 }
 
-function extractTags(img) {
-  if (!img || !img.alt) return [];
-
-  return img.alt
-    .split(" ")
-    .map(normalize)
-    .filter(t =>
-      t &&
-      !t.startsWith("score:") &&
-      !t.startsWith("user:")
-    );
+/* Show on hover of the parent thumb */
+.thumb:hover .r34-bl-btn {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-async function evaluatePost(post) {
-  const img = post.querySelector("img");
-  if (!img) return;
-
-  const tags = extractTags(img);
-  const { whitelist, blacklist } = await getFilters();
-
-  // BLACKLIST IS ABSOLUTE
-  if (blacklist.some(t => tags.includes(t))) {
-    post.style.display = "none";
-    return;
-  }
-
-  // WHITELIST (if defined)
-  if (whitelist.length && !whitelist.every(t => tags.includes(t))) {
-    post.style.display = "none";
-    return;
-  }
-
-  post.style.display = "";
+/* Already-blacklisted posts always show the button (so you can unblacklist) */
+.r34-bl-btn--active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  background: rgba(180, 30, 30, 0.88) !important;
+  border-color: rgba(255, 100, 100, 0.4) !important;
 }
 
-async function filterPosts() {
-  document.querySelectorAll(".thumb").forEach(post => {
-    evaluatePost(post);
-
-    const img = post.querySelector("img");
-    if (!img) return;
-
-    // Re-evaluate when image finishes loading
-    if (!img.dataset.filtered) {
-      img.dataset.filtered = "true";
-      img.addEventListener("load", () => evaluatePost(post));
-    }
-  });
+.r34-bl-btn:hover {
+  background: rgba(180, 30, 30, 0.92);
 }
 
-// Observe DOM changes
-let pending = false;
-const observer = new MutationObserver(() => {
-  if (pending) return;
-  pending = true;
-  requestAnimationFrame(() => {
-    filterPosts();
-    pending = false;
-  });
-});
-
-observer.observe(document.body, { childList: true, subtree: true });
-filterPosts();
+/* Full view-page variant — larger, fixed position near the image */
+.r34-bl-btn--view {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  bottom: auto;
+  transform: none;
+  font-size: 13px;
+  padding: 5px 12px;
+  opacity: 1;
+  pointer-events: auto;
+}
